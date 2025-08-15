@@ -5,22 +5,31 @@ from fastapi.exceptions import RequestValidationError
 from starlette.responses import JSONResponse
 
 from app.models import SimilarityResponse, SimilarityRequest, HealthResponse, SimilarityMetric
+from app.services.llm_service import LLMService
 from app.services.similarity_service import TextSimilarityService
 from app.utils.config import settings
 
 # Global service instances
+llm_service = None
 similarity_service = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize services on startup and cleanup on shutdown."""
-    global similarity_service
+    global llm_service, similarity_service
 
     print("Starting up text similarity service...")
 
     # Initialize services
+    llm_service = LLMService(
+        base_url=settings.LLM_BASE_URL,
+        model=settings.LLM_MODEL
+    )
     similarity_service = TextSimilarityService()
+
+    # Check LLM availability
+    _ = await llm_service.is_available()
 
     print("Service initialization complete")
 
@@ -45,11 +54,20 @@ def get_similarity_service() -> TextSimilarityService:
     return similarity_service
 
 
+def get_llm_service() -> LLMService:
+    if llm_service is None:
+        raise HTTPException(status_code=503, detail="LLM service not initialized")
+    return llm_service
+
+
 @app.get("/health", response_model=HealthResponse)
-async def health_check() -> HealthResponse:
+async def health_check(
+        llm_svc: LLMService = Depends(get_llm_service)
+) -> HealthResponse:
     """Health check endpoint."""
+    is_llm_available = await llm_svc.is_available()
     return HealthResponse(
-        is_llm_available=False,
+        is_llm_available=is_llm_available,
         service=settings.SERVICE_NAME,
         status="healthy",
         version=settings.VERSION
@@ -72,6 +90,7 @@ async def get_available_metrics():
 @app.post("/similarity", response_model=SimilarityResponse)
 async def calculate_similarity(
         request: SimilarityRequest,
+        llm_svc: LLMService = Depends(get_llm_service),
         similarity_svc: TextSimilarityService = Depends(get_similarity_service)
 ) -> SimilarityResponse:
     """
@@ -80,7 +99,7 @@ async def calculate_similarity(
     This endpoint:
     1. Sanitizes input prompts (TODO)
     2. Calculates similarity using specified metric
-    3. If prompts are similar enough, sends one to LLM (TODO)
+    3. If prompts are similar enough, sends one to LLM
     4. Sanitized and returns the response (TODO)
     """
     try:
@@ -89,16 +108,22 @@ async def calculate_similarity(
             request.prompt2,
             request.similarity_metric
         )
-
         success = similarity_score >= request.similarity_threshold
-
         response = SimilarityResponse(
             are_similar=success,
-            llm_response="The prompts are similar! Here's a hardcoded response for demonstration." if success else None,
             similarity_metric=request.similarity_metric,
             similarity_score=similarity_score
         )
 
+        if not request.use_llm or not success:
+            return response
+
+        llm_response = await llm_svc.generate_response(request.prompt1)
+        if not llm_response:
+            print("LLM failed to generate response")
+            llm_response = "LLM service unavailable or failed to generate response"
+
+        response.llm_response = llm_response
         return response
     except HTTPException:
         raise

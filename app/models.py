@@ -30,6 +30,10 @@ class SimilarityRequest(BaseModel):
         le=1.0,
         description="Minimum similarity score to trigger LLM call"
     )
+    use_llm: bool = Field(
+        default=False,
+        description="Whether to use LLM for generating response if prompts are similar"
+    )
 
     @field_validator("prompt1", "prompt2")
     @classmethod

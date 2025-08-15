@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import patch, AsyncMock
 
 from starlette.testclient import TestClient
 
@@ -11,13 +11,15 @@ client = TestClient(app)
 
 class TestAPI:
     def test_endpoint_health(self):
-        response = client.get("/health")
-        assert response.status_code == 200
-        data = response.json()
-        assert data["is_llm_available"] == False
-        assert data["service"] == settings.SERVICE_NAME
-        assert data["status"] == "healthy"
-        assert data["version"] == settings.VERSION
+        with patch("app.main.llm_service") as mock_llm:
+            mock_llm.is_available = AsyncMock(return_value=True)
+            response = client.get("/health")
+            assert response.status_code == 200
+            data = response.json()
+            assert data["is_llm_available"] == True
+            assert data["service"] == settings.SERVICE_NAME
+            assert data["status"] == "healthy"
+            assert data["version"] == settings.VERSION
 
     def test_endpoint_metrics(self):
         response = client.get("/metrics")
@@ -33,10 +35,17 @@ class TestAPI:
             "prompt1": "This is a test sentence.",
             "prompt2": "This is another test sentence.",
             "similarity_metric": "cosine",
-            "similarity_threshold": 0.5
+            "similarity_threshold": 0.5,
+            "use_llm": True
         }
 
-        with patch("app.main.similarity_service") as mock_sim:
+        with (
+            patch("app.main.llm_service") as mock_llm,
+            patch("app.main.similarity_service") as mock_sim
+        ):
+            # Mock LLM service
+            mock_llm.generate_response = AsyncMock(return_value="This is a test response")
+
             # Mock similarity service
             mock_sim.calculate_similarity.return_value = 0.8
 
@@ -49,7 +58,10 @@ class TestAPI:
             assert "llm_response" in data
 
     def test_endpoint_similarity_validation_errors(self):
-        with patch("app.main.similarity_service"):
+        with (
+            patch("app.main.llm_service"),
+            patch("app.main.similarity_service")
+        ):
             # Test empty prompt
             payload = {
                 "prompt1": "",
