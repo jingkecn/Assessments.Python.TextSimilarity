@@ -44,7 +44,7 @@ class TestAPI:
             patch("app.main.similarity_service") as mock_sim
         ):
             # Mock LLM service
-            mock_llm.generate_response = AsyncMock(return_value="This is a test response")
+            mock_llm.generate_response_with_retry = AsyncMock(return_value="This is a test response")
 
             # Mock similarity service
             mock_sim.calculate_similarity.return_value = 0.8

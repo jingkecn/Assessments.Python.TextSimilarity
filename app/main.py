@@ -118,7 +118,7 @@ async def calculate_similarity(
         if not request.use_llm or not success:
             return response
 
-        llm_response = await llm_svc.generate_response(request.prompt1)
+        llm_response = await llm_svc.generate_response_with_retry(request.prompt1)
         if not llm_response:
             print("LLM failed to generate response")
             llm_response = "LLM service unavailable or failed to generate response"

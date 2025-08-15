@@ -1,3 +1,4 @@
+import asyncio
 from typing import Optional
 
 import httpx
@@ -56,3 +57,25 @@ class LLMService:
         except Exception as e:
             print(f"Error calling LLM: {e}")
             return None
+
+    async def generate_response_with_retry(self, prompt: str, retries: int = 3) -> Optional[str]:
+        """
+        Generate response with retry logic.
+        :param prompt: The input prompt for LLM
+        :param retries: Number of retries on failure
+        :return: Generated response or None if failed
+        """
+        for attempt in range(retries):
+            try:
+                response = await self.generate_response(prompt)
+                if response:
+                    return response
+
+                if attempt < retries:
+                    print(f"Retrying... Attempt {attempt + 1}/{retries}")
+                    await asyncio.sleep(2 ** attempt) # exponential backoff
+            except Exception as e:
+                print(f"Attempt {attempt + 1} failed: {e}")
+                if attempt < retries:
+                    await asyncio.sleep(2 ** attempt) # exponential backoff
+        return None
