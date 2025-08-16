@@ -1,0 +1,9 @@
+# Development override for Docker Compose
+# This file provides development-specific configurations
+
+services:
+  text-similarity:
+    env_file:
+      - .env.dev  # Use a development-specific environment file
+    volumes:
+      - ./app:/app/app  # For development

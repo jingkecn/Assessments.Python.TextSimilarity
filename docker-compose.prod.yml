@@ -1,0 +1,7 @@
+# Development override for Docker Compose
+# This file provides production-specific configurations
+
+services:
+  text-similarity:
+    env_file:
+      - .env.prod  # Use a production-specific environment file
