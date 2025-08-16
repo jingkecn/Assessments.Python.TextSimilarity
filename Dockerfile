@@ -24,6 +24,9 @@ RUN useradd --create-home appuser
 RUN chown -R appuser:appuser /app
 USER appuser
 
+# Pre-download the sentence transformer model to cache it in the image
+RUN python -c "from pathlib import Path; from sentence_transformers import SentenceTransformer; SentenceTransformer('${SENTENCE_TRANSFORMER_MODEL}', cache_folder=f'{Path.home()}/.cache/sentence_transformers')"
+
 # Expose the port
 EXPOSE 44101
 

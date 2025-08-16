@@ -25,5 +25,8 @@ class Settings(BaseSettings):
     SERVICE_NAME: str = os.environ.get('SERVICE_NAME', "text-similarity-service")
     VERSION: str = os.environ.get('VERSION', "1.0.0")
 
+    # Sentence Transformer Model
+    SENTENCE_TRANSFORMER_MODEL: str = os.environ.get('SENTENCE_TRANSFORMER_MODEL', "all-MiniLM-L6-v2")
+
 
 settings = Settings()

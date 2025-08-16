@@ -1,6 +1,9 @@
 services:
   text-similarity:
-    build: .
+    build:
+      context: .
+      args:
+        SENTENCE_TRANSFORMER_MODEL: ${SENTENCE_TRANSFORMER_MODEL:-all-MiniLM-L6-v2}
     ports:
       - "44101:44101"
     depends_on:

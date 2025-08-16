@@ -1,15 +1,21 @@
+from pathlib import Path
+
 from sentence_transformers import SentenceTransformer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 from app.models import SimilarityMetric
+from app.utils.config import settings
 
 
 class TextSimilarityService:
     def __init__(self):
         try:
             # Initialize semantic similarity model
-            self.semantic_model = SentenceTransformer("all-MiniLM-L6-v2")
+            self.semantic_model = SentenceTransformer(
+                settings.SENTENCE_TRANSFORMER_MODEL,
+                cache_folder=f"{Path.home()}/.cache/sentence_transformers"
+            )
         except Exception as e:
             print(f"Failed to load semantic model: {e}")
             self.semantic_model = None
