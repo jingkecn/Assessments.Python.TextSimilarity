@@ -26,7 +26,10 @@ async def lifespan(app: FastAPI):
     # Initialize services
     llm_service = LLMService(
         base_url=settings.LLM_BASE_URL,
-        model=settings.LLM_MODEL
+        model=settings.LLM_MODEL,
+        timeout=settings.LLM_TIMEOUT,
+        max_retries=settings.LLM_MAX_RETRIES,
+        temperature=settings.LLM_TEMPERATURE
     )
     sanitization_service = TextSanitizationService()
     similarity_service = TextSimilarityService()
@@ -76,7 +79,9 @@ async def health_check(
     """Health check endpoint."""
     is_llm_available = await llm_svc.is_available()
     return HealthResponse(
+        environment=settings.ENVIRONMENT,
         is_llm_available=is_llm_available,
+        llm_model=settings.LLM_MODEL,
         service=settings.SERVICE_NAME,
         status="healthy",
         version=settings.VERSION
@@ -177,4 +182,4 @@ async def handle_internal_error(request, exception: Exception) -> JSONResponse:
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=44101)
+    uvicorn.run(app, host=settings.API_HOST, port=settings.API_PORT)

@@ -5,7 +5,9 @@ from pydantic import BaseModel, Field, field_validator
 
 
 class HealthResponse(BaseModel):
+    environment: str
     is_llm_available: bool
+    llm_model: str
     service: str
     status: str
     version: str

@@ -5,13 +5,12 @@ import httpx
 
 
 class LLMService:
-    def __init__(
-            self,
-            base_url: str = "http://localhost:11434",
-            model: str = "llama2"):
+    def __init__(self, base_url: str, model: str, timeout: float, max_retries: int, temperature: float):
         self.base_url = base_url
         self.model = model
-        self.timeout = 30.0
+        self.timeout = timeout
+        self.max_retries = max_retries
+        self.temperature = temperature
 
     async def is_available(self) -> bool:
         """Check if LLM service is available."""
@@ -36,7 +35,7 @@ class LLMService:
                     "prompt": prompt,
                     "stream": False,
                     "options": {
-                        "temperature": 0.7
+                        "temperature": self.temperature
                     }
                 }
 
@@ -58,13 +57,16 @@ class LLMService:
             print(f"Error calling LLM: {e}")
             return None
 
-    async def generate_response_with_retry(self, prompt: str, retries: int = 3) -> Optional[str]:
+    async def generate_response_with_retry(self, prompt: str, retries: Optional[int] = None) -> Optional[str]:
         """
         Generate response with retry logic.
         :param prompt: The input prompt for LLM
-        :param retries: Number of retries on failure
+        :param retries: Number of retries on failure (uses service default if None)
         :return: Generated response or None if failed
         """
+        if retries is None:
+            retries = self.max_retries
+
         for attempt in range(retries):
             try:
                 response = await self.generate_response(prompt)
@@ -73,9 +75,9 @@ class LLMService:
 
                 if attempt < retries:
                     print(f"Retrying... Attempt {attempt + 1}/{retries}")
-                    await asyncio.sleep(2 ** attempt) # exponential backoff
+                    await asyncio.sleep(2 ** attempt)  # exponential backoff
             except Exception as e:
                 print(f"Attempt {attempt + 1} failed: {e}")
                 if attempt < retries:
-                    await asyncio.sleep(2 ** attempt) # exponential backoff
+                    await asyncio.sleep(2 ** attempt)  # exponential backoff
         return None
