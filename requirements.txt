@@ -2,6 +2,7 @@ better-profanity==0.7.0
 fastapi==0.116.1
 httpx==0.28.1
 locust==2.38.1
+numpy==2.3.2
 pydantic==2.11.7
 pydantic_settings==2.10.1
 pytest==8.4.1

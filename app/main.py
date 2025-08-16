@@ -5,12 +5,14 @@ from fastapi.exceptions import RequestValidationError
 from starlette.responses import JSONResponse
 
 from app.models import SimilarityResponse, SimilarityRequest, HealthResponse, SimilarityMetric
+from app.services.cache_service import CacheService
 from app.services.llm_service import LLMService
 from app.services.sanitization_service import TextSanitizationService
 from app.services.similarity_service import TextSimilarityService
 from app.utils.config import settings
 
 # Global service instances
+cache_service = None
 llm_service = None
 sanitization_service = None
 similarity_service = None
@@ -19,11 +21,12 @@ similarity_service = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize services on startup and cleanup on shutdown."""
-    global llm_service, sanitization_service, similarity_service
+    global cache_service, llm_service, sanitization_service, similarity_service
 
     print("Starting up text similarity service...")
 
     # Initialize services
+    cache_service = CacheService()
     llm_service = LLMService(
         base_url=settings.LLM_BASE_URL,
         model=settings.LLM_MODEL,
@@ -32,7 +35,7 @@ async def lifespan(app: FastAPI):
         temperature=settings.LLM_TEMPERATURE
     )
     sanitization_service = TextSanitizationService()
-    similarity_service = TextSimilarityService()
+    similarity_service = TextSimilarityService(cache_service)
 
     # Check LLM availability
     _ = await llm_service.is_available()
@@ -54,6 +57,12 @@ app = FastAPI(
 
 
 # Dependency injection for services
+def get_cache_service() -> CacheService:
+    if cache_service is None:
+        raise HTTPException(status_code=503, detail="Cache service not initialized")
+    return cache_service
+
+
 def get_similarity_service() -> TextSimilarityService:
     if similarity_service is None:
         raise HTTPException(status_code=503, detail="Similarity service not initialized")
