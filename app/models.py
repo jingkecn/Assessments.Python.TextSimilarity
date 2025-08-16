@@ -18,8 +18,8 @@ class SimilarityMetric(str, Enum):
 
 
 class SimilarityRequest(BaseModel):
-    prompt1: str = Field(..., min_length=1, description="First text prompt")
-    prompt2: str = Field(..., min_length=1, description="Second text prompt")
+    prompt1: str = Field(..., min_length=1, max_length=1000, description="First text prompt")
+    prompt2: str = Field(..., min_length=1, max_length=1000, description="Second text prompt")
     similarity_metric: SimilarityMetric = Field(
         default=SimilarityMetric.COSINE,
         description="Similarity metric to use"

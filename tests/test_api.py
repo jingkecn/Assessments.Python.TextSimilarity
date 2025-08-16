@@ -41,10 +41,14 @@ class TestAPI:
 
         with (
             patch("app.main.llm_service") as mock_llm,
+            patch("app.main.sanitization_service") as mock_san,
             patch("app.main.similarity_service") as mock_sim
         ):
             # Mock LLM service
             mock_llm.generate_response_with_retry = AsyncMock(return_value="This is a test response")
+
+            # Mock sanitization service
+            mock_san.sanitize_text = lambda x: x.strip()
 
             # Mock similarity service
             mock_sim.calculate_similarity.return_value = 0.8
@@ -60,6 +64,7 @@ class TestAPI:
     def test_endpoint_similarity_validation_errors(self):
         with (
             patch("app.main.llm_service"),
+            patch("app.main.sanitization_service"),
             patch("app.main.similarity_service")
         ):
             # Test empty prompt

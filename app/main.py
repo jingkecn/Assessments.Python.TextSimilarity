@@ -6,18 +6,20 @@ from starlette.responses import JSONResponse
 
 from app.models import SimilarityResponse, SimilarityRequest, HealthResponse, SimilarityMetric
 from app.services.llm_service import LLMService
+from app.services.sanitization_service import TextSanitizationService
 from app.services.similarity_service import TextSimilarityService
 from app.utils.config import settings
 
 # Global service instances
 llm_service = None
+sanitization_service = None
 similarity_service = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize services on startup and cleanup on shutdown."""
-    global llm_service, similarity_service
+    global llm_service, sanitization_service, similarity_service
 
     print("Starting up text similarity service...")
 
@@ -26,6 +28,7 @@ async def lifespan(app: FastAPI):
         base_url=settings.LLM_BASE_URL,
         model=settings.LLM_MODEL
     )
+    sanitization_service = TextSanitizationService()
     similarity_service = TextSimilarityService()
 
     # Check LLM availability
@@ -52,6 +55,12 @@ def get_similarity_service() -> TextSimilarityService:
     if similarity_service is None:
         raise HTTPException(status_code=503, detail="Similarity service not initialized")
     return similarity_service
+
+
+def get_sanitization_service() -> TextSanitizationService:
+    if sanitization_service is None:
+        raise HTTPException(status_code=503, detail="Sanitization service not initialized")
+    return sanitization_service
 
 
 def get_llm_service() -> LLMService:
@@ -91,21 +100,27 @@ async def get_available_metrics():
 async def calculate_similarity(
         request: SimilarityRequest,
         llm_svc: LLMService = Depends(get_llm_service),
+        sanitization_svc: TextSanitizationService = Depends(get_sanitization_service),
         similarity_svc: TextSimilarityService = Depends(get_similarity_service)
 ) -> SimilarityResponse:
     """
     Calculate text similarity between two prompts.
 
     This endpoint:
-    1. Sanitizes input prompts (TODO)
+    1. Sanitizes input prompts
     2. Calculates similarity using specified metric
     3. If prompts are similar enough, sends one to LLM
-    4. Sanitized and returns the response (TODO)
+    4. Sanitized and returns the response
     """
     try:
+        prompt1 = sanitization_svc.sanitize_text(request.prompt1)
+        prompt2 = sanitization_svc.sanitize_text(request.prompt2)
+        if prompt1 != request.prompt1 or prompt2 != request.prompt2:
+            raise ValueError(f"Input sanitized: prompt1='{prompt1}', prompt2='{prompt2}'")
+
         similarity_score = similarity_svc.calculate_similarity(
-            request.prompt1,
-            request.prompt2,
+            prompt1,
+            prompt2,
             request.similarity_metric
         )
         success = similarity_score >= request.similarity_threshold
@@ -123,7 +138,7 @@ async def calculate_similarity(
             print("LLM failed to generate response")
             llm_response = "LLM service unavailable or failed to generate response"
 
-        response.llm_response = llm_response
+        response.llm_response = sanitization_svc.sanitize_text(llm_response)
         return response
     except HTTPException:
         raise
