@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 from typing import Optional
 
@@ -12,18 +13,28 @@ from app.utils.config import settings
 
 class TextSimilarityService:
     def __init__(self, cache_service: Optional[CacheService] = None):
+        self._semantic_model: Optional[SentenceTransformer] = None
+        self.cache_service: Optional[CacheService] = cache_service
+
+    @property
+    async def semantic_model(self) -> Optional[SentenceTransformer]:
+        """Get or create the semantic model."""
+        if self._semantic_model is not None:
+            return self._semantic_model
+
         try:
-            self.cache_service = cache_service
             # Initialize semantic similarity model
-            self.semantic_model = SentenceTransformer(
+            self._semantic_model = SentenceTransformer(
                 settings.SENTENCE_TRANSFORMER_MODEL,
                 cache_folder=f"{Path.home()}/.cache/sentence_transformers"
             )
         except Exception as e:
             print(f"Failed to load semantic model: {e}")
-            self.semantic_model = None
+            self._semantic_model = None
+        
+        return self._semantic_model
 
-    def cosine_similarity_tfidf(self, text1: str, text2: str) -> float:
+    async def cosine_similarity_tfidf(self, text1: str, text2: str) -> float:
         """Calculate cosine similarity using TF-IDF vectors."""
         similarity = self.cache_service.get_similarity(
             SimilarityMetric.COSINE.value, text1, text2) if self.cache_service else None
@@ -43,7 +54,7 @@ class TextSimilarityService:
             print(f"Error calculating cosine similarity: {e}")
             return 0.0
 
-    def jaccard_similarity(self, text1: str, text2: str) -> float:
+    async def jaccard_similarity(self, text1: str, text2: str) -> float:
         """Calculate Jaccard similarity based on word sets."""
         similarity = self.cache_service.get_similarity(
             SimilarityMetric.JACCARD.value, text1, text2) if self.cache_service else None
@@ -72,11 +83,12 @@ class TextSimilarityService:
             print(f"Error calculating Jaccard similarity: {e}")
             return 0.0
 
-    def semantic_similarity(self, text1: str, text2: str) -> float:
+    async def semantic_similarity(self, text1: str, text2: str) -> float:
         """Calculate semantic similarity using sentence transformers."""
-        if self.semantic_model is None:
+        semantic_model = await self.semantic_model
+        if semantic_model is None:
             print("Semantic model not available, falling back to cosine similarity")
-            return self.cosine_similarity_tfidf(text1, text2)
+            return await self.cosine_similarity_tfidf(text1, text2)
 
         similarity = self.cache_service.get_similarity(
             SimilarityMetric.SEMANTIC.value, text1, text2) if self.cache_service else None
@@ -85,7 +97,8 @@ class TextSimilarityService:
 
         try:
             # Get embeddings
-            embeddings = self.semantic_model.encode([text1, text2])
+            # embeddings = semantic_model.encode([text1, text2])
+            embeddings = await asyncio.to_thread(semantic_model.encode, [text1, text2])
 
             # Calculate cosine similarity between embeddings
             similarity = cosine_similarity([embeddings[0]], [embeddings[1]])[0][0]
@@ -95,9 +108,9 @@ class TextSimilarityService:
             return float(similarity)
         except Exception as e:
             print(f"Error calculating semantic similarity: {e}")
-            return self.cosine_similarity_tfidf(text1, text2)
+            return await self.cosine_similarity_tfidf(text1, text2)
 
-    def calculate_similarity(self, text1: str, text2: str, metric: SimilarityMetric) -> float:
+    async def calculate_similarity(self, text1: str, text2: str, metric: SimilarityMetric) -> float:
         """Calculate similarity using specified metric."""
         metric_map = {
             SimilarityMetric.COSINE: self.cosine_similarity_tfidf,
@@ -106,4 +119,4 @@ class TextSimilarityService:
         }
 
         similarity_func = metric_map.get(metric)
-        return similarity_func(text1, text2)
+        return await similarity_func(text1, text2)

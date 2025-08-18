@@ -132,7 +132,7 @@ async def calculate_similarity(
         if prompt1 != request.prompt1 or prompt2 != request.prompt2:
             raise ValueError(f"Input sanitized: prompt1='{prompt1}', prompt2='{prompt2}'")
 
-        similarity_score = similarity_svc.calculate_similarity(
+        similarity_score = await similarity_svc.calculate_similarity(
             prompt1,
             prompt2,
             request.similarity_metric

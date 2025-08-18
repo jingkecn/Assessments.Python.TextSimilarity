@@ -55,7 +55,7 @@ class TextSimilarityUser(HttpUser):
             "prompt1": prompt1,
             "prompt2": prompt2,
             "similarity_metric": "cosine",
-            "similarity_threshold": random.uniform(0.5, 0.9)
+            "user_llm": False,  # Avoid LLM calls for this test
         }
 
         with self.client.post("/similarity", json=payload, catch_response=True) as response:
@@ -73,7 +73,7 @@ class TextSimilarityUser(HttpUser):
             "prompt1": prompt1,
             "prompt2": prompt2,
             "similarity_metric": "jaccard",
-            "similarity_threshold": random.uniform(0.4, 0.8)
+            "user_llm": False,  # Avoid LLM calls for this test
         }
 
         with self.client.post("/similarity", json=payload, catch_response=True) as response:
@@ -91,7 +91,7 @@ class TextSimilarityUser(HttpUser):
             "prompt1": prompt1,
             "prompt2": prompt2,
             "similarity_metric": "semantic",
-            "similarity_threshold": random.uniform(0.3, 0.7)
+            "user_llm": False,  # Avoid LLM calls for this test
         }
 
         with self.client.post("/similarity", json=payload, catch_response=True) as response:

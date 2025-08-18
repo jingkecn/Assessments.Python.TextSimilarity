@@ -51,7 +51,7 @@ class TestAPI:
             mock_san.sanitize_text = lambda x: x.strip()
 
             # Mock similarity service
-            mock_sim.calculate_similarity.return_value = 0.8
+            mock_sim.calculate_similarity = AsyncMock(return_value=0.8)
 
             response = client.post("/similarity", json=payload)
             assert response.status_code == 200
