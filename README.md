@@ -102,6 +102,8 @@ pytest tests/test_similarity_service.py -v
 
 ### Integration Tests
 
+> [!TODO] Test real integrated services instead of mocked ones.
+
 ```bash
 pytest tests/test_api.py -v
 ```
@@ -144,9 +146,9 @@ locust -f scripts/load_test.py --host=http://localhost:44101
 
 ## Performance
 
-- [ ] **Response Time**: TODO
+- [x] **Response Time**: ~10 ms (50th percentile)
 - [ ] **LLM Calls**: TODO
-- [ ] **Throughput**: TODO
+- [x] **Throughput**: ~300 RPS (w/o LLM calls)
 - [ ] **Memory**: TODO
 
 [^1]: Aditya Singh (May 7, 2024). ["ULTIMATE GUIDE TO TEXT SIMILARITY WITH PYTHON"](https://www.newscatcherapi.com/blog/ultimate-guide-to-text-similarity-with-python)
