@@ -191,4 +191,4 @@ async def handle_internal_error(request, exception: Exception) -> JSONResponse:
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host=settings.API_HOST, port=settings.API_PORT)
+    uvicorn.run("main:app", host=settings.API_HOST, port=settings.API_PORT, workers=settings.WEB_CONCURRENCY)

@@ -28,5 +28,8 @@ class Settings(BaseSettings):
     # Sentence Transformer Model
     SENTENCE_TRANSFORMER_MODEL: str = os.environ.get('SENTENCE_TRANSFORMER_MODEL', "all-MiniLM-L6-v2")
 
+    # Worker configuration
+    WEB_CONCURRENCY: int = int(os.environ.get("WEB_CONCURRENCY", os.cpu_count()))
+
 
 settings = Settings()
